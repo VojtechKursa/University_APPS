@@ -1,0 +1,18 @@
+[submodule "apps-asm-demo"]
+	path = apps-asm-demo
+	url = https://github.com/apps-cs/apps-asm-demo
+[submodule "Code/GitHub_Materials/apps-asm-demo"]
+	path = Code/GitHub_Materials/apps-asm-demo
+	url = https://github.com/apps-cs/apps-asm-demo
+[submodule "Code/GitHub_Materials/apps-mcu-schemas"]
+	path = Code/GitHub_Materials/apps-mcu-schemas
+	url = https://github.com/apps-cs/apps-mcu-schemas
+[submodule "Code/GitHub_Materials/apps-cuda-demo"]
+	path = Code/GitHub_Materials/apps-cuda-demo
+	url = https://github.com/apps-cs/apps-cuda-demo
+[submodule "Code/GitHub_Materials/apps-lcd-opencv-simul"]
+	path = Code/GitHub_Materials/apps-lcd-opencv-simul
+	url = https://github.com/apps-cs/apps-lcd-opencv-simul
+[submodule "Code/GitHub_Materials/apps-thread-demo"]
+	path = Code/GitHub_Materials/apps-thread-demo
+	url = https://github.com/apps-cs/apps-thread-demo
