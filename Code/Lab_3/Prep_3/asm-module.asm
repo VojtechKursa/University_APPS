@@ -104,30 +104,20 @@ biggest_byte:
 	global highest_bit
 ;RDI = t_num
 highest_bit:
-	bswap rdi
-	mov eax, 0	; out
-	mov r10, 0	; loop counter
-.begin_1:
-	cmp r10, 8
-	jge .end_1
+	mov eax, 0						; out + counter
+	mov r10, 0x8000000000000000		; mask
 
-	mov sil, 128	;mask
-.begin_2:
-	cmp sil, 0
-	jbe .end_2
+.begin:
+	cmp r10, 0
+	je .end
 
-	test sil, dil
-	jne .end_1
+	test r10, rdi
+	jne .end
 
+	shr r10, 1
 	inc eax
-	shr sil, 1
-	jmp .begin_2
-.end_2:
-
-	shr rdi, 8
-	inc r10
-	jmp .begin_1
-.end_1:
+	jmp .begin
+.end:
 	ret
 
 
