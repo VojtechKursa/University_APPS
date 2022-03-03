@@ -1,6 +1,3 @@
-[submodule "apps-asm-demo"]
-	path = apps-asm-demo
-	url = https://github.com/apps-cs/apps-asm-demo
 [submodule "Code/GitHub_Materials/apps-asm-demo"]
 	path = Code/GitHub_Materials/apps-asm-demo
 	url = https://github.com/apps-cs/apps-asm-demo
@@ -16,6 +13,6 @@
 [submodule "Code/GitHub_Materials/apps-thread-demo"]
 	path = Code/GitHub_Materials/apps-thread-demo
 	url = https://github.com/apps-cs/apps-thread-demo
-[submodule "MCU"]
-	path = MCU
-	url = https://github.com/apps-cs/apps-workspace.mcu
+[submodule "MCU_demo"]
+	path = Code/GitHub_Materials/apps-mcu-demo
+	url = http://github.com/apps-cs/apps-workspace.mcu
