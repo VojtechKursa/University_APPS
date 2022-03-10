@@ -1,7 +1,8 @@
 *.metadata/
 *.settings/
-*.cproject
-*.project
+
+**/*_[1-4]/.project
+**/*_[1-4]/.cproject
 
 *.o
 *c-main
