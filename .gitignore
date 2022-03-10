@@ -1,5 +1,6 @@
 *.metadata/
 *.settings/
+*.mcuxpressoide_packages_support/
 
 **/*_[1-4]/.project
 **/*_[1-4]/.cproject
