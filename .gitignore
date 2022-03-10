@@ -6,3 +6,5 @@
 
 *.o
 *c-main
+
+!**/MCU_commons/*
