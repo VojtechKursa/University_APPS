@@ -47,11 +47,3 @@ void RGBLED::SetColor(int r, int g, int b)
 	LedG->SetBrightness(g);
 	LedB->SetBrightness(b);
 }
-
-
-void RGBLED::Tick(int step)
-{
-	LedR->Tick(step);
-	LedG->Tick(step);
-	LedB->Tick(step);
-}

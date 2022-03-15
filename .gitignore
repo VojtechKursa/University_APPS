@@ -9,3 +9,8 @@
 *c-main
 
 !**/MCU_commons/*
+
+**/AzureRTOS_TAD_logs/
+**/FreeRTOS_TAD_logs/
+
+*.launch
