@@ -22,6 +22,8 @@ public:
 	int GetB();
 
 	void SetColor(int r, int g, int b);
+
+	void Tick(int step);
 };
 
 

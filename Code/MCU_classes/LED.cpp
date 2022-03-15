@@ -51,7 +51,7 @@ int LED::Read()
 
 void LED::Tick(int step)
 {
-	nextValue = step <= brightness ? 1 : 0;
+	nextValue = step < brightness ? 1 : 0;
 
 	if (nextValue != currValue)
 	{
