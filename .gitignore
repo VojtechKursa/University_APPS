@@ -14,3 +14,4 @@
 **/FreeRTOS_TAD_logs/
 
 *.launch
+*Debug/
