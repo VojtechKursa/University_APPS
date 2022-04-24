@@ -1,17 +1,20 @@
 *.metadata/
 *.settings/
 *.mcuxpressoide_packages_support/
+*.vscode
 
-**/*_[1-4]/.project
-**/*_[1-4]/.cproject
+**/.project
+**/.cproject
 
 *.o
 *c-main
+*main
 
 !**/MCU_commons/*
 
 **/AzureRTOS_TAD_logs/
 **/FreeRTOS_TAD_logs/
+**/RemoteSystemsTempFiles/
 
 *.launch
 *Debug/
