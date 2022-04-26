@@ -6,56 +6,54 @@
 #include "uni_mem_allocator.h"
 
 // Function prototype from .cu file
-void cu_run_grayscale( CudaImg t_bgr_cuda_img, CudaImg t_bw_cuda_img );
-void cu_run_dim( CudaImg t_img, uchar3 brightness );
-void cu_run_split( CudaImg orig_img, CudaImg r_img, CudaImg g_img, CudaImg b_img );
+void cu_run_split(CudaImg img_orig, CudaImg img_r, CudaImg img_g, CudaImg img_b);
+void cu_run_dim( CudaImg img, uchar3 brightness );
+void cu_run_grayscale( CudaImg img_color, CudaImg img_greyscale );
 
-int main( int t_numarg, char **t_arg )
+
+int main( int argc, char **argv )
 {
     // Uniform Memory allocator for Mat
     UniformAllocator allocator;
     cv::Mat::setDefaultAllocator( &allocator );
 
-    if ( t_numarg < 2 )
+    if ( argc < 2 )
     {
         printf( "Enter picture filename!\n" );
         return 1;
     }
 
-    // Load image
-    cv::Mat l_bgr_cv_img = cv::imread( t_arg[ 1 ], cv::IMREAD_COLOR ); // CV_LOAD_IMAGE_COLOR );
+    // Originally loaded image
+    cv::Mat img_orig = cv::imread( argv[ 1 ], cv::IMREAD_COLOR );
 
-    if ( !l_bgr_cv_img.data )
+    if ( !img_orig.data )
     {
-        printf( "Unable to read file '%s'\n", t_arg[ 1 ] );
+        printf( "Unable to read file '%s'\n", argv[ 1 ] );
         return 1;
     }
 
-    // create empty BW image
-    cv::Mat l_bw_cv_img( l_bgr_cv_img.size(), CV_8U );
+    cv::Mat img_bw( img_orig.size(), CV_8U );
 
-    // data for CUDA
-    CudaImg l_bgr_cuda_img(l_bgr_cv_img);
-    CudaImg l_bw_cuda_img(l_bw_cv_img);
+    CudaImg img_orig_cuda(img_orig);
+    CudaImg img_bw_cuda(img_bw);
 
-    // Function calling from .cu file
-    cu_run_grayscale( l_bgr_cuda_img, l_bw_cuda_img );
+    cu_run_grayscale( img_orig_cuda, img_bw_cuda );
 
-    // Show the Color and BW image
-    cv::imshow( "Color", l_bgr_cv_img );
-    cv::imshow( "GrayScale", l_bw_cv_img );
+    cv::imshow( "Color", img_orig );
+    cv::imshow( "GrayScale", img_bw );
 
 
     // Split
-	cv::Mat img_r(l_bgr_cv_img.size(), CV_8UC3);
-	cv::Mat img_g(l_bgr_cv_img.size(), CV_8UC3);
-	cv::Mat img_b(l_bgr_cv_img.size(), CV_8UC3);
+
+	cv::Mat img_r(img_orig.size(), CV_8UC3);
+	cv::Mat img_g(img_orig.size(), CV_8UC3);
+	cv::Mat img_b(img_orig.size(), CV_8UC3);
 
 	CudaImg img_r_cuda(img_r);
 	CudaImg img_g_cuda(img_g);
 	CudaImg img_b_cuda(img_b);
 
-	cu_run_split(l_bgr_cuda_img, img_r_cuda, img_g_cuda, img_b_cuda);
+	cu_run_split(img_orig_cuda, img_r_cuda, img_g_cuda, img_b_cuda);
 
 	cv::imshow("Red channel", img_r);
 	cv::imshow("Green channel", img_g);
@@ -63,7 +61,8 @@ int main( int t_numarg, char **t_arg )
 
 
     // Dim
-    cv::Mat img_br = cv::Mat(l_bgr_cv_img);
+
+    cv::Mat img_br = cv::Mat(img_orig);
     CudaImg img_br_cuda(img_br);
 
     uchar3 brightness;

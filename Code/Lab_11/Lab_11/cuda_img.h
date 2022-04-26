@@ -18,45 +18,27 @@
 
 #include <opencv2/core/mat.hpp>
 
-/*
-// Structure definition for exchanging data between Host and Device
-struct CudaImg
-{
-  uint2 m_size;             // size of picture
-  union {
-      void   *m_p_void;     // data of picture
-      uchar1 *m_p_uchar1;   // data of picture
-      uchar3 *m_p_uchar3;   // data of picture
-      uchar4 *m_p_uchar4;   // data of picture
-  };
-};
-*/
-
 class CudaImg
 {
 public:
-	uint3 m_size;             // size of picture
-	union {
-		void   *m_p_void;     // data of picture
-	    uchar1 *m_p_uchar1;   // data of picture
-	    uchar3 *m_p_uchar3;   // data of picture
-	    uchar4 *m_p_uchar4;   // data of picture
+	uint3 m_size; // size of picture
+	union
+	{
+		void *m_p_void;		// data of picture
+		uchar1 *m_p_uchar1; // data of picture
+		uchar3 *m_p_uchar3; // data of picture
+		uchar4 *m_p_uchar4; // data of picture
 	};
 
-	CudaImg(cv::Mat matrix)
-	{
-		m_size.x = matrix.cols;
-		m_size.y = matrix.rows;
+	CudaImg(cv::Mat matrix);
+	CudaImg(uint3 size);
 
-		m_p_void = matrix.data;
-	}
-
-	CudaImg(uint3 size)
-	{
-		m_size = size;
-
-		m_p_void = nullptr;
-	}
+	/*
+	GPU code included in header file, because nvcc doesn't like
+	when functions used in one file are just defined by header and
+	implemented in another file and I can't be bothered to research a way to
+	tell it to link everything together properly
+	*/
 
 	__device__ uchar1& at1(int y, int x)
 	{

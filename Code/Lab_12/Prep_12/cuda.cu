@@ -3,59 +3,59 @@
 
 #include "cuda_img.h"
 
-__global__ void kernel_select_insert(CudaImg big_img, CudaImg small_img, int2 pos, bool select)
+__global__ void kernel_select_insert(CudaImg img_big, CudaImg img_small, int2 pos, bool select)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (x >= small_img.m_size.x || x + pos.x >= big_img.m_size.x) return;
-    if (y >= small_img.m_size.y || y + pos.x >= big_img.m_size.y) return;
+    if (x >= img_small.m_size.x || x + pos.x >= img_big.m_size.x) return;
+    if (y >= img_small.m_size.y || y + pos.x >= img_big.m_size.y) return;
 
     if (select)
-        small_img.m_p_uchar3[y * small_img.m_size.x + x] = big_img.m_p_uchar3[(pos.y + y) * big_img.m_size.x + (pos.x + x)];
+        img_small.at3(y, x) = img_big.at3(pos.y + y, pos.x + x);
     else
-        big_img.m_p_uchar3[(pos.y + y) * big_img.m_size.x + (pos.x + x)] = small_img.m_p_uchar3[y * small_img.m_size.x + x];
+        img_big.at3(pos.y + y, pos.x + x) = img_small.at3(y, x);
 }
 
-__global__ void kernel_rotate_90(CudaImg original, CudaImg rotated, bool clockwise)
+__global__ void kernel_rotate_90(CudaImg img_orig, CudaImg img_rotated, bool clockwise)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (x >= original.m_size.x) return;
-    if (y >= original.m_size.y) return;
+    if (x >= img_orig.m_size.x) return;
+    if (y >= img_orig.m_size.y) return;
 
     int newX, newY;
 
     if (clockwise)
     {
-        newX = original.m_size.y - y - 1;
+        newX = img_orig.m_size.y - y - 1;
         newY = x;
     }
     else
     {
         newX = y;
-        newY = original.m_size.x - x - 1;
+        newY = img_orig.m_size.x - x - 1;
     }
 
-    if (newX >= rotated.m_size.x) return;
-    if (newY >= rotated.m_size.y) return;
+    if (newX >= img_rotated.m_size.x) return;
+    if (newY >= img_rotated.m_size.y) return;
 
-    rotated.m_p_uchar3[newY * rotated.m_size.x + newX] = original.m_p_uchar3[y * original.m_size.x + x];
+    img_rotated.at3(newY, newX) = img_orig.at3(y, x);
 }
 
 
 
-void cu_select_insert( CudaImg &t_big_rgb, CudaImg &t_small_rgb, int2 t_pos, bool select )
+void cu_select_insert( CudaImg &img_big, CudaImg &img_small, int2 pos, bool select )
 {
     cudaError_t cudaErr;
 
-    int blockSize = 16;
-    dim3 blockCount;
-    blockCount.x = t_small_rgb.m_size.x / blockSize + (t_small_rgb.m_size.x % blockSize ? 1 : 0);
-    blockCount.y = t_small_rgb.m_size.y / blockSize + (t_small_rgb.m_size.y % blockSize ? 1 : 0);
+    int block_size = 16;
+    dim3 block_count;
+    block_count.x = img_small.m_size.x / block_size + (img_small.m_size.x % block_size ? 1 : 0);
+    block_count.y = img_small.m_size.y / block_size + (img_small.m_size.y % block_size ? 1 : 0);
 
-    kernel_select_insert<<<blockCount, dim3(blockSize, blockSize)>>>(t_big_rgb, t_small_rgb, t_pos, select);
+    kernel_select_insert<<<block_count, dim3(block_size, block_size)>>>(img_big, img_small, pos, select);
 
     if ((cudaErr = cudaGetLastError()) != cudaSuccess)
         printf( "CUDA Error [%d] - '%s'\n", __LINE__, cudaGetErrorString( cudaErr ) );
@@ -63,16 +63,16 @@ void cu_select_insert( CudaImg &t_big_rgb, CudaImg &t_small_rgb, int2 t_pos, boo
     cudaDeviceSynchronize();
 }
 
-void cu_rotate_90( CudaImg &t_in_rgb, CudaImg &t_rot_rgb, bool clockwise )
+void cu_rotate_90( CudaImg &img_orig, CudaImg &img_rotated, bool clockwise )
 {
     cudaError_t cudaErr;
 
-    int blockSize = 16;
-    dim3 blockCount;
-    blockCount.x = t_in_rgb.m_size.x / blockSize + (t_in_rgb.m_size.x % blockSize ? 1 : 0);
-    blockCount.y = t_in_rgb.m_size.y / blockSize + (t_in_rgb.m_size.y % blockSize ? 1 : 0);
+    int block_size = 16;
+    dim3 block_count;
+    block_count.x = img_orig.m_size.x / block_size + (img_orig.m_size.x % block_size ? 1 : 0);
+    block_count.y = img_orig.m_size.y / block_size + (img_orig.m_size.y % block_size ? 1 : 0);
 
-    kernel_rotate_90<<<blockCount, dim3(blockSize, blockSize)>>>(t_in_rgb, t_rot_rgb, clockwise);
+    kernel_rotate_90<<<block_count, dim3(block_size, block_size)>>>(img_orig, img_rotated, clockwise);
 
     if ((cudaErr = cudaGetLastError()) != cudaSuccess)
         printf( "CUDA Error [%d] - '%s'\n", __LINE__, cudaGetErrorString( cudaErr ) );

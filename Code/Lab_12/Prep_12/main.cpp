@@ -1,70 +1,74 @@
 #include <cuda_runtime.h>
 #include <cuda_device_runtime_api.h>
 #include <opencv2/opencv.hpp>
+#include <iostream>
 
 #include "uni_mem_allocator.h"
 #include "cuda_img.h"
 
-// 0 - Select, 1 - Insert, 2 - Rotate Clockwise, 3 - Rotate Counterclockwise
-#define TEST 0
+using namespace std;
 
-void cu_select_insert( CudaImg &t_big_rgb, CudaImg &t_small_rgb, int2 t_pos, bool select );
-void cu_rotate_90( CudaImg &t_in_rgb, CudaImg &t_rot_rgb, bool clockwise );
+void cu_select_insert( CudaImg &img_big, CudaImg &img_small, int2 pos, bool select );
+void cu_rotate_90( CudaImg &img_orig, CudaImg &img_rotated, bool clockwise );
 
 int main(int argc, char** argv)
 {
+    // 0 - Select, 1 - Insert, 2 - Rotate Clockwise, 3 - Rotate Counterclockwise
+    int test_num;
+
+    if(argc < 2)
+    {
+        cout << "ERR: Test number not specified.\n";
+        exit(1);
+    }
+
+    test_num = argv[1][0] - '0';
+
     UniformAllocator allocator;
     cv::Mat::setDefaultAllocator(&allocator);
 
-    if (TEST == 0 || TEST == 1)
+    if (test_num == 0 || test_num == 1)
     {
         int2 size = {205, 407};
         int2 pos = {13, 7};
 
-        cv::Mat imageSmall, imageBig;
+        cv::Mat img_small, img_big;
 
-        if (TEST == 0)
-            imageSmall = cv::Mat(size.y, size.x, CV_8UC3);
+        if (test_num == 0)
+            img_small = cv::Mat(size.y, size.x, CV_8UC3);
         else
-            imageSmall = cv::imread("imgSmall.png", cv::IMREAD_COLOR);
+            img_small = cv::imread("imgSmall.png", cv::IMREAD_COLOR);
     
-        imageBig = cv::imread("imgBig.png", cv::IMREAD_COLOR);
+        img_big = cv::imread("imgBig.png", cv::IMREAD_COLOR);
         
 
-        CudaImg cudaImgSmall, cudaImgBig;
-        cudaImgSmall.m_size.x = imageSmall.cols;
-        cudaImgSmall.m_size.y = imageSmall.rows;
-        cudaImgSmall.m_p_uchar3 = (uchar3*)imageSmall.data;
-        cudaImgBig.m_size.x = imageBig.cols;
-        cudaImgBig.m_size.y = imageBig.rows;
-        cudaImgBig.m_p_uchar3 = (uchar3*)imageBig.data;
+        CudaImg img_small_cuda(img_small);
+        CudaImg img_big_cuda(img_big);
 
-        cu_select_insert(cudaImgBig, cudaImgSmall, pos, TEST == 0);
+        cu_select_insert(img_big_cuda, img_small_cuda, pos, test_num == 0);
 
-        if (TEST == 0)
-            cv::imshow("Selected image", imageSmall);
+        if (test_num == 0)
+            cv::imshow("Selected image", img_small);
         else
-            cv::imshow("Image after insertion", imageBig);
+            cv::imshow("Image after insertion", img_big);
     }
-    else if (TEST == 2 || TEST == 3)
+    else if (test_num == 2 || test_num == 3)
     {
-        cv::Mat image = cv::imread("imgBig.png", cv::IMREAD_COLOR);
-        cv::Mat rotatedImage(image.cols, image.rows, CV_8UC3);
+        cv::Mat img_orig = cv::imread("imgBig.png", cv::IMREAD_COLOR);
+        cv::Mat img_rotated(img_orig.cols, img_orig.rows, CV_8UC3);
 
-        CudaImg cudaImg, cudaImgRotated;
-        cudaImg.m_size.x = image.cols;
-        cudaImg.m_size.y = image.rows;
-        cudaImg.m_p_uchar3 = (uchar3*)image.data;
-        cudaImgRotated.m_size.x = rotatedImage.cols;
-        cudaImgRotated.m_size.y = rotatedImage.rows;
-        cudaImgRotated.m_p_uchar3 = (uchar3*)rotatedImage.data;
+        CudaImg img_orig_cuda(img_orig);
+        CudaImg img_rotated_cuda(img_rotated);
 
-        cu_rotate_90(cudaImg, cudaImgRotated, TEST == 2);
+        cu_rotate_90(img_orig_cuda, img_rotated_cuda, test_num == 2);
         
-        cv::imshow("Rotated image", rotatedImage);
+        cv::imshow("Rotated image", img_rotated);
     }
     else
-        return 1;
+    {
+        cout << "ERR: Invalid test number specified.\n";
+        exit(1);
+    }
 
 
 

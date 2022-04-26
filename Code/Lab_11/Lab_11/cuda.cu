@@ -3,99 +3,113 @@
 
 #include "cuda_img.h"
 
-__global__ void kernel_split( CudaImg orig_img, CudaImg r_img, CudaImg g_img, CudaImg b_img)
+__global__ void kernel_split(CudaImg img_orig, CudaImg img_r, CudaImg img_g, CudaImg img_b)
 {
-	int l_y = blockDim.y * blockIdx.y + threadIdx.y;
-    int l_x = blockDim.x * blockIdx.x + threadIdx.x;
-    if ( l_y >= orig_img.m_size.y ) return;
-    if ( l_x >= orig_img.m_size.x ) return;
+    int posX = blockDim.x * blockIdx.x + threadIdx.x;
+	int posY = blockDim.y * blockIdx.y + threadIdx.y;
+    if ( posX >= img_orig.m_size.x ) return;
+    if ( posY >= img_orig.m_size.y ) return;
 
-    uchar3 l_bgr = orig_img.at3(l_y, l_x);
-    uchar3& l_r = r_img.at3(l_y, l_x);
-    uchar3& l_g = g_img.at3(l_y, l_x);
-    uchar3& l_b = b_img.at3(l_y, l_x);
+    uchar3 pixel_orig_bgr = img_orig.at3(posY, posX);
+    uchar3& pixel_r_bgr = img_r.at3(posY, posX);
+    uchar3& pixel_g_bgr = img_g.at3(posY, posX);
+    uchar3& pixel_b_bgr = img_b.at3(posY, posX);
 
-    r_img.at3(l_y, l_x).z = l_bgr.z;
-    g_img.at3(l_y, l_x).y = l_bgr.y;
-    b_img.at3(l_y, l_x).x = l_bgr.x;
+    pixel_r_bgr.z = pixel_orig_bgr.z;
+    pixel_r_bgr.y = pixel_r_bgr.x = 0;
+
+    pixel_g_bgr.y = pixel_orig_bgr.y;
+    pixel_g_bgr.x = pixel_g_bgr.z = 0;
+    
+    pixel_b_bgr.x = pixel_orig_bgr.x;
+    pixel_b_bgr.y = pixel_b_bgr.z = 0;
 }
 
-__global__ void kernel_dim( CudaImg t_img, uchar3 brightness)
+__global__ void kernel_dim(CudaImg img, uchar3 brightness)
 {
-    // X,Y coordinates and check image dimensions
-    int l_y = blockDim.y * blockIdx.y + threadIdx.y;
-    int l_x = blockDim.x * blockIdx.x + threadIdx.x;
-    if ( l_y >= t_img.m_size.y ) return;
-    if ( l_x >= t_img.m_size.x ) return;
+    int posX = blockDim.x * blockIdx.x + threadIdx.x;
+	int posY = blockDim.y * blockIdx.y + threadIdx.y;
+    if ( posX >= img.m_size.x ) return;
+    if ( posY >= img.m_size.y ) return;
 
-    // Get point from color picture
-    uchar3& l_bgr = t_img.at3(l_y, l_x);
+    uchar3& pixel_bgr = img.at3(posY, posX);
 
-    l_bgr.x = l_bgr.x * brightness.z / 100;
-    l_bgr.y = l_bgr.y * brightness.y / 100;
-    l_bgr.z = l_bgr.z * brightness.x / 100;
+    pixel_bgr.x = pixel_bgr.x * brightness.z / 100;
+    pixel_bgr.y = pixel_bgr.y * brightness.y / 100;
+    pixel_bgr.z = pixel_bgr.z * brightness.x / 100;
 }
 
-// Demo kernel to transform RGB color schema to BW schema
-__global__ void kernel_grayscale( CudaImg t_color_cuda_img, CudaImg t_bw_cuda_img )
+__global__ void kernel_grayscale(CudaImg img_color, CudaImg image_grayscale)
 {
-    // X,Y coordinates and check image dimensions
-    int l_y = blockDim.y * blockIdx.y + threadIdx.y;
-    int l_x = blockDim.x * blockIdx.x + threadIdx.x;
-    if ( l_y >= t_color_cuda_img.m_size.y ) return;
-    if ( l_x >= t_color_cuda_img.m_size.x ) return;
+    int posX = blockDim.x * blockIdx.x + threadIdx.x;
+	int posY = blockDim.y * blockIdx.y + threadIdx.y;
+    if ( posX >= img_color.m_size.x ) return;
+    if ( posY >= img_color.m_size.y ) return;
 
-    // Get point from color picture
-    uchar3 l_bgr = t_color_cuda_img.at3(l_y, l_x);
+    uchar3 pixel_bgr = img_color.at3(posY, posX);
 
     // Store BW point to new image
-    t_bw_cuda_img.at1(l_y, l_x).x = l_bgr.x * 0.11 + l_bgr.y * 0.59 + l_bgr.z * 0.30;
+    image_grayscale.at1(posY, posX).x = pixel_bgr.x * 0.11 + pixel_bgr.y * 0.59 + pixel_bgr.z * 0.30;
 }
 
-void cu_run_split( CudaImg orig_img, CudaImg r_img, CudaImg g_img, CudaImg b_img )
+
+
+void cu_run_split(CudaImg img_orig, CudaImg img_r, CudaImg img_g, CudaImg img_b)
 {
-    cudaError_t l_cerr;
+    cudaError_t cuda_err;
 
-    // Grid creation, size of grid must be equal or greater than images
-    int l_block_size = 16;
-    dim3 l_blocks( ( orig_img.m_size.x + l_block_size - 1 ) / l_block_size, ( orig_img.m_size.y + l_block_size - 1 ) / l_block_size );
-    dim3 l_threads( l_block_size, l_block_size );
-    kernel_split<<< l_blocks, l_threads >>>( orig_img, r_img, g_img, b_img );
+    int block_size = 16;
 
-    if ( ( l_cerr = cudaGetLastError() ) != cudaSuccess )
-        printf( "CUDA Error [%d] - '%s'\n", __LINE__, cudaGetErrorString( l_cerr ) );
+    dim3 block_count;
+    block_count.x = img_orig.m_size.x / block_size + (img_orig.m_size.x % block_size ? 1 : 0);
+    block_count.y = img_orig.m_size.y / block_size + (img_orig.m_size.y % block_size ? 1 : 0);
+    
+    dim3 thread_count( block_size, block_size );
+
+    kernel_split<<< block_count, thread_count >>>( img_orig, img_r, img_g, img_b );
+
+    if ( ( cuda_err = cudaGetLastError() ) != cudaSuccess )
+        printf( "CUDA Error [%d] - '%s'\n", __LINE__, cudaGetErrorString( cuda_err ) );
 
     cudaDeviceSynchronize();
 }
 
-void cu_run_dim( CudaImg t_img, uchar3 brightness )
+void cu_run_dim( CudaImg img, uchar3 brightness )
 {
-    cudaError_t l_cerr;
+    cudaError_t cuda_err;
 
-    // Grid creation, size of grid must be equal or greater than images
-    int l_block_size = 16;
-    dim3 l_blocks( ( t_img.m_size.x + l_block_size - 1 ) / l_block_size, ( t_img.m_size.y + l_block_size - 1 ) / l_block_size );
-    dim3 l_threads( l_block_size, l_block_size );
-    kernel_dim<<< l_blocks, l_threads >>>( t_img, brightness );
+    int block_size = 16;
+    
+    dim3 block_count;
+    block_count.x = img.m_size.x / block_size + (img.m_size.x % block_size ? 1 : 0);
+    block_count.y = img.m_size.y / block_size + (img.m_size.y % block_size ? 1 : 0);
 
-    if ( ( l_cerr = cudaGetLastError() ) != cudaSuccess )
-        printf( "CUDA Error [%d] - '%s'\n", __LINE__, cudaGetErrorString( l_cerr ) );
+    dim3 thread_count( block_size, block_size );
+
+    kernel_dim<<< block_count, thread_count >>>( img, brightness );
+
+    if ( ( cuda_err = cudaGetLastError() ) != cudaSuccess )
+        printf( "CUDA Error [%d] - '%s'\n", __LINE__, cudaGetErrorString( cuda_err ) );
 
     cudaDeviceSynchronize();
 }
 
-void cu_run_grayscale( CudaImg t_color_cuda_img, CudaImg t_bw_cuda_img )
+void cu_run_grayscale( CudaImg img_color, CudaImg img_greyscale )
 {
-    cudaError_t l_cerr;
+    cudaError_t cuda_err;
 
-    // Grid creation, size of grid must be equal or greater than images
-    int l_block_size = 16;
-    dim3 l_blocks( ( t_color_cuda_img.m_size.x + l_block_size - 1 ) / l_block_size, ( t_color_cuda_img.m_size.y + l_block_size - 1 ) / l_block_size );
-    dim3 l_threads( l_block_size, l_block_size );
-    kernel_grayscale<<< l_blocks, l_threads >>>( t_color_cuda_img, t_bw_cuda_img );
+    int block_size = 16;
+    
+    dim3 block_count;
+    block_count.x = img_color.m_size.x / block_size + (img_color.m_size.x % block_size ? 1 : 0);
+    block_count.y = img_color.m_size.y / block_size + (img_color.m_size.y % block_size ? 1 : 0);
 
-    if ( ( l_cerr = cudaGetLastError() ) != cudaSuccess )
-        printf( "CUDA Error [%d] - '%s'\n", __LINE__, cudaGetErrorString( l_cerr ) );
+    dim3 thread_count( block_size, block_size );
+
+    kernel_grayscale<<< block_count, thread_count >>>( img_color, img_greyscale );
+
+    if ( ( cuda_err = cudaGetLastError() ) != cudaSuccess )
+        printf( "CUDA Error [%d] - '%s'\n", __LINE__, cudaGetErrorString( cuda_err ) );
 
     cudaDeviceSynchronize();
 }
