@@ -12,6 +12,7 @@ private:
     CudaImg *img_background = nullptr;
     CudaImg *img_inserted = nullptr;
     CudaImg *img_inserted_flipped = nullptr;
+    CudaImg *img_insert_blurred = nullptr;
     CudaImg *img_result = nullptr;
 
     timeval lastFrameTime;
@@ -19,6 +20,11 @@ private:
     
     int2 insert_position;
     int2 insert_speed;  //!< In pixels/s
+
+    uint8_t blur = 1;
+    uint8_t blurLimit = 5;
+    double blurBuffer = 0;
+    double blurChange = 1;
 
     timeval DoTiming();
     void DoMovementCalculation(timeval timeSinceLastFrame);

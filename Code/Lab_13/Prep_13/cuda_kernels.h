@@ -9,3 +9,4 @@ __global__ void kernel_select_insert(CudaImg img_big, CudaImg img_small, int2 po
 __global__ void kernel_rotate_90(CudaImg img_orig, CudaImg img_rotated, bool clockwise);
 __global__ void kernel_decrease_res(CudaImg img_orig, CudaImg img_small );
 __global__ void kernel_flip(CudaImg img_orig, CudaImg img_flipped);
+__global__ void kernel_blur(CudaImg img_orig, CudaImg img_blurred, int blurFactor);

@@ -8,3 +8,4 @@ void cu_rotate_90_internal( CudaImg &img_orig, CudaImg &img_rotated, bool clockw
 void cu_decrease_res(CudaImg &img_orig, CudaImg &img_small);
 void cu_decrease_res_internal( CudaImg &img_orig, CudaImg &img_small );
 void cu_flip_internal( CudaImg &img_orig, CudaImg &img_flipped);
+void cu_blur_internal(CudaImg &img_orig, CudaImg &img_blurred, int blurFactor);

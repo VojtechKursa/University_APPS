@@ -86,3 +86,22 @@ void cu_flip_internal( CudaImg &img_orig, CudaImg &img_flipped)
     if ((cudaErr = cudaGetLastError()) != cudaSuccess)
         printf( "CUDA Error [%d] - '%s'\n", __LINE__, cudaGetErrorString( cudaErr ) );
 }
+
+void cu_blur_internal(CudaImg &img_orig, CudaImg &img_blurred, int blurFactor)
+{
+    cudaError_t cudaErr;
+
+    int2 blurredResolution;
+    blurredResolution.x = img_orig.m_size.x / blurFactor;
+    blurredResolution.y = img_orig.m_size.y / blurFactor;
+
+    int block_size = 16;
+    dim3 block_count;
+    block_count.x = blurredResolution.x / block_size + (blurredResolution.x % block_size ? 1 : 0);
+    block_count.y = blurredResolution.y / block_size + (blurredResolution.y % block_size ? 1 : 0);
+
+    kernel_blur<<<block_count, dim3(block_size, block_size)>>>(img_orig, img_blurred, blurFactor);
+
+    if ((cudaErr = cudaGetLastError()) != cudaSuccess)
+        printf( "CUDA Error [%d] - '%s'\n", __LINE__, cudaGetErrorString( cudaErr ) );
+}

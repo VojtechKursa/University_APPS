@@ -95,3 +95,45 @@ __global__ void kernel_flip(CudaImg img_orig, CudaImg img_flipped)
 
     img_flipped.at4(y, img_orig.m_size.x - x - 1) = img_orig.at4(y, x);
 }
+
+__global__ void kernel_blur(CudaImg img_orig, CudaImg img_blurred, int blurFactor)
+{
+	int startX = (blockIdx.x * blockDim.x + threadIdx.x) * blurFactor;
+	int startY = (blockIdx.y * blockDim.y + threadIdx.y) * blurFactor;
+
+	int stopX = min(startX + blurFactor, img_orig.m_size.x);
+	int stopY = min(startY + blurFactor, img_orig.m_size.y);
+
+	if (startX > stopX) return;
+	if (startY > stopY) return;
+
+	uint4 sum = {0,0,0,0};
+	uchar4 pixel;
+	
+	for(int y = startY; y < stopY; y++)
+	{
+		for(int x = startX; x < stopX; x++)
+		{
+			pixel = img_orig.at4(y, x);
+
+			sum.x += pixel.x;
+			sum.y += pixel.y;
+			sum.z += pixel.z;
+			sum.w += pixel.w;
+		}
+	}
+
+	int actuallyBlurredPixels = (stopY - startY) * (stopX - startX);
+	pixel.y = sum.y / actuallyBlurredPixels;
+	pixel.x = sum.x / actuallyBlurredPixels;
+	pixel.z = sum.z / actuallyBlurredPixels;
+	pixel.w = sum.w / actuallyBlurredPixels;
+
+	for(int y = startY; y < stopY; y++)
+	{
+		for(int x = startX; x < stopX; x++)
+		{
+			img_blurred.at4(y, x) = pixel;
+		}
+	}
+}
