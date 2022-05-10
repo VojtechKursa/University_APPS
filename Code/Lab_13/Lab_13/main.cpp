@@ -11,33 +11,28 @@ using namespace std;
 
 int main(void)
 {
-	cv::Mat img_background_full = cv::imread("background.png", cv::IMREAD_UNCHANGED);
-	CudaImg img_background_full_cuda = CudaImg(img_background_full);
-
-	cv::Mat img_insert_full = cv::imread("insert.png", cv::IMREAD_UNCHANGED);
-	CudaImg img_insert_full_cuda = CudaImg(img_insert_full);
-    
-    cv::Mat img_background(img_background_full_cuda.m_size.y / 2, img_background_full_cuda.m_size.x / 2, CV_8UC4);
+	cv::Mat img_background= cv::imread("background.png", cv::IMREAD_UNCHANGED);
 	CudaImg img_background_cuda = CudaImg(img_background);
 
-	cv::Mat img_insert(img_insert_full_cuda.m_size.y / 2, img_insert_full_cuda.m_size.x / 2, CV_8UC4);
+	cv::Mat img_insert = cv::imread("insert.png", cv::IMREAD_UNCHANGED);
 	CudaImg img_insert_cuda = CudaImg(img_insert);
 
     cv::Mat img_out(img_background_cuda.m_size.y, img_background_cuda.m_size.x, CV_8UC4);
     CudaImg img_out_cuda = CudaImg(img_out);
 
 
-    cu_decrease_res(img_background_full_cuda, img_background_cuda);
-    cu_decrease_res(img_insert_full_cuda, img_insert_cuda);
+    Animation animation(img_background_cuda, img_insert_cuda);
 
+    /*
+    cv::Mat image_temp(img_background_cuda.m_size.y / 2, img_background_cuda.m_size.x, CV_8UC4);
+    CudaImg image_temp_cuda(image_temp);
 
-    int2 initialPos, initialSpeed;
-    initialPos.x = 10;
-    initialPos.y = (img_background_cuda.m_size.y / 2) - (img_insert_cuda.m_size.y / 2);
-    initialSpeed.x = (img_background_cuda.m_size.x - img_insert_cuda.m_size.x) / 5;
-    initialSpeed.y = -((img_background_cuda.m_size.y - img_insert_cuda.m_size.y) / 10);
+    animation.GibImg(image_temp_cuda, true);
+    cv::imshow("Upper", image_temp);
 
-    Animation animation(img_background_cuda, img_insert_cuda, initialPos, initialSpeed);
+    animation.GibImg(image_temp_cuda, false);
+    cv::imshow("Lower", image_temp);
+    */
 
     while(true)
     {

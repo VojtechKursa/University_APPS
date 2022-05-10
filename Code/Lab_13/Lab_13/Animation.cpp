@@ -1,53 +1,60 @@
 #include "Animation.h"
 
-Animation::Animation(CudaImg img_background, CudaImg img_inserted, int2 startingPosition, int2 startingSpeed)
+Animation::Animation(CudaImg img_background, CudaImg img_inserted)
 {
     this->lastFrameTime.tv_usec = 0;
     this->frameTreshold.tv_usec = 15000;
 
-    this->insert_position = startingPosition;
-    this->insert_speed = startingSpeed;
 
-    this->img_background = new CudaImg(img_background.m_size);
-    cudaErrCheck(cudaMalloc(&(this->img_background->m_p_void), img_background.m_size.x * img_background.m_size.y * 4));
-    cudaErrCheck(cudaMemcpy(this->img_background->m_p_void, img_background.m_p_void, img_background.m_size.x * img_background.m_size.y * 4, cudaMemcpyHostToDevice));
+    uint3 halfSize = {img_background.m_size.x, img_background.m_size.y / 2, img_background.m_size.z};
+
+    this->img_background_upper = new CudaImg(halfSize);
+    this->img_background_lower = new CudaImg(halfSize);
+
+    cudaErrCheck(cudaMalloc(&(this->img_background_upper->m_p_void), img_background_upper->m_size.x * img_background_upper->m_size.y * 4));
+    cudaErrCheck(cudaMalloc(&(this->img_background_lower->m_p_void), img_background_lower->m_size.x * img_background_lower->m_size.y * 4));
+
+    CudaImg img_background_int(img_background.m_size);
+    cudaErrCheck(cudaMalloc(&(img_background_int.m_p_void), img_background_int.m_size.x * img_background_int.m_size.y * 4));
+    cudaErrCheck(cudaMemcpy(img_background_int.m_p_void, img_background.m_p_void, img_background.m_size.x * img_background.m_size.y * 4, cudaMemcpyHostToDevice));
+
+    cu_split_internal(img_background_int, *this->img_background_upper, *this->img_background_lower);
+
+    cudaErrCheck(cudaFree(img_background_int.m_p_void));
+
 
     this->img_inserted = new CudaImg(img_inserted.m_size);
     cudaErrCheck(cudaMalloc(&(this->img_inserted->m_p_void), img_inserted.m_size.x * img_inserted.m_size.y * 4)); 
     cudaErrCheck(cudaMemcpy(this->img_inserted->m_p_void, img_inserted.m_p_void, img_inserted.m_size.x * img_inserted.m_size.y * 4, cudaMemcpyHostToDevice));
 
-    this->img_inserted_flipped = new CudaImg(img_inserted.m_size);
-    cudaErrCheck(cudaMalloc(&(this->img_inserted_flipped->m_p_void), img_inserted_flipped->m_size.x * img_inserted_flipped->m_size.y * 4));
-    // Add flip
-
-    this->img_insert_blurred = new CudaImg(img_inserted.m_size);
-    cudaErrCheck(cudaMalloc(&(this->img_insert_blurred->m_p_void), img_insert_blurred->m_size.x * img_insert_blurred->m_size.y * 4));
-
     this->img_result = new CudaImg(img_background.m_size);
     cudaErrCheck(cudaMalloc(&(this->img_result->m_p_void), img_result->m_size.x * img_result->m_size.y * 4));
+
+
+    this->upper_posY = -1 * (int)(this->img_background_upper->m_size.y);
+    this->lower_posY = this->img_result->m_size.y;
+
+    this->inserts[0] = {250, -50, 20};
+    this->inserts[1] = {0, -120, 40};
+    this->inserts[2] = {100, -150, 60};
 }
 
 Animation::~Animation()
 {
-    if (img_background != nullptr)
+    if (img_background_upper != nullptr)
     {
-        cudaErrCheck(cudaFree(img_background->m_p_void));
-        delete img_background;
+        cudaErrCheck(cudaFree(img_background_upper->m_p_void));
+        delete img_background_upper;
+    }
+    if (img_background_lower != nullptr)
+    {
+        cudaErrCheck(cudaFree(img_background_lower->m_p_void));
+        delete img_background_lower;
     }
     if (img_inserted != nullptr)
     {
         cudaErrCheck(cudaFree(img_inserted->m_p_void));
         delete img_inserted;
-    }
-    if (img_inserted_flipped != nullptr)
-    {
-        cudaErrCheck(cudaFree(img_inserted_flipped->m_p_void));
-        delete img_inserted_flipped;
-    }
-    if (img_insert_blurred != nullptr)
-    {
-        cudaErrCheck(cudaFree(img_insert_blurred->m_p_void));
-        delete img_insert_blurred;
     }
     if (img_result != nullptr)
     {
@@ -66,13 +73,15 @@ void Animation::Step(CudaImg img_result)
     {
         DoMovementCalculation(timeSinceLast);
 
+        cu_clear_internal(*this->img_result);
 
-        cudaErrCheck(cudaMemcpy(this->img_result->m_p_void, this->img_background->m_p_void, this->img_background->m_size.x * this->img_background->m_size.y * 4, cudaMemcpyDeviceToDevice));
+        cu_select_insert_internal(*this->img_result, *this->img_background_upper, {0, (int)round(upper_posY)}, false);
+        cu_select_insert_internal(*this->img_result, *this->img_background_lower, {0, (int)round(lower_posY)}, false);
 
-        //Add flip
-        //Add blur
-
-        cu_select_insert_internal(*this->img_result, *this->img_inserted, this->insert_position, false);
+        for(int i = 0; i < 3; i++)
+        {
+            cu_select_insert_internal(*this->img_result, *this->img_inserted, {(int)this->inserts[i].posX, (int)this->inserts[i].posY}, false);
+        }
     }
 
     cudaErrCheck(cudaMemcpy(img_result.m_p_void, this->img_result->m_p_void, img_result.m_size.x * img_result.m_size.y * 4, cudaMemcpyDeviceToHost));
@@ -105,54 +114,25 @@ timeval Animation::DoTiming()
 void Animation::DoMovementCalculation(timeval timeSinceLastFrame)
 {
     double seconds = timeSinceLastFrame.tv_usec / (double)1000000;
-    
-    this->insert_position.x += round(this->insert_speed.x * seconds);
-    this->insert_position.y += round(this->insert_speed.y * seconds);
 
-    // Add blur adjust
+    upper_posY += seconds * backgroundSpeed;
+    lower_posY -= seconds * backgroundSpeed;
 
-    bool adjustMade;
-    do
+    if(upper_posY + img_background_upper->m_size.y >= lower_posY)
     {
-        adjustMade = MovementOverflowGuard();
-    } while (adjustMade);
+    	upper_posY = 0;
+    	lower_posY = img_background_upper->m_size.y;
+    }
+
+    for(int i = 0; i < 3; i++)
+    {
+    	inserts[i].posY += seconds * inserts[i].speed;
+    }
 }
 
-bool Animation::MovementOverflowGuard()
+void Animation::GibImg(CudaImg img, bool upper)
 {
-    bool adjustMade = false;
+	CudaImg selectedImage = *(upper ? img_background_upper : img_background_lower);
 
-    if(this->insert_position.x < 0)
-    {
-        this->insert_position.x *= -1;
-        this->insert_speed.x *= -1;
-
-        adjustMade = true;
-    }
-    else if(this->insert_position.x + this->img_inserted->m_size.x > img_background->m_size.x)
-    {
-        this->insert_position.x -= 2*((this->insert_position.x + this->img_inserted->m_size.x) - this->img_background->m_size.x);
-        this->insert_speed.x *= -1;
-
-        adjustMade = true;
-    }
-    
-    if(this->insert_position.y < 0)
-    {
-        this->insert_position.y *= -1;
-        this->insert_speed.y *= -1;
-
-        adjustMade = true;
-    }
-    else if(this->insert_position.y + this->img_inserted->m_size.y > img_background->m_size.y)
-    {
-        this->insert_position.y -= 2*((this->insert_position.y + this->img_inserted->m_size.y) - this->img_background->m_size.y);
-        this->insert_speed.y *= -1;
-        
-        adjustMade = true;
-    }
-
-    // Add blur overflow guard
-
-    return adjustMade;
+	cudaMemcpy(img.m_p_void, selectedImage.m_p_void, selectedImage.m_size.x * selectedImage.m_size.y * 4, cudaMemcpyDeviceToHost);
 }

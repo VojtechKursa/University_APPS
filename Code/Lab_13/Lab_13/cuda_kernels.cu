@@ -84,3 +84,14 @@ __global__ void kernel_decrease_res(CudaImg img_orig, CudaImg img_small )
 
 	img_small.at4(y, x) = pixel;
 }
+
+__global__ void kernel_clear(CudaImg img)
+{
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (x >= img.m_size.x) return;
+	if (y >= img.m_size.y) return;
+
+	img.at4(y, x) = {0,0,0,0};
+}
